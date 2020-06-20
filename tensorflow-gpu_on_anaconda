@@ -1,0 +1,141 @@
+# Posted on: https://satish-ramaswamy.blogspot.com/2020/06/install-tensorflow-on-anaconda-ubuntu.html
+
+
+Installing TensorFlow GPU on Anaconda
+
+1. Install anaconda
+
+satish@ubuntu20:~/Downloads$ ./Anaconda3-2020.02-Linux-x86_64.sh
+
+On Windows, it will prompt whether you want to install Tensorflow for All Users or Myself. If you try to install Anaconda with unprivileged ID:
+
+<snipped>
+
+Anaconda3 will now be installed into this location:
+/home/satish/anaconda3
+
+  - Press ENTER to confirm the location
+  - Press CTRL-C to abort the installation
+  - Or specify a different location below
+
+[/home/satish/anaconda3] >>> /opt/anaconda3/
+mkdir: cannot create directory ‘/opt/anaconda3/’: Permission denied
+ERROR: Could not create directory: '/opt/anaconda3/'
+satish@ubuntu20:~/Downloads$
+
+Note: you may end-up using sudo to install the software that creates all files within /opt/anaconda3/ as root:root. That can cause grief for unprivileged users
+
+Imp: For enterprise use with multiple users accessing it on same system, a Systems Engineer must install the software as root but provide sufficient privileges to non-root users instead of letting each user install software by themselves. So, create a new group called as 'conda' and add all users who will be using Anaconda to conda as secondary group.
+
+Change the group-ownership of files & folders in cache folder /opt/anaconda3/pkgs/cache to root:conda with dir as 775 & files as 664
+
+If not, you will get these errors:
+
+NotWritableError: The current user does not have write permissions to a required path.
+  path: /opt/anaconda3/pkgs/cache/f1f1f480.json
+  uid: 1000
+  gid: 1000
+
+
+Steps:
+
+satish@ubuntu20:~/Downloads$ sudo ./Anaconda3-2020.02-Linux-x86_64.sh
+
+satish@ubuntu20:~/Downloads$ /opt/anaconda3/bin/conda create -n tfgpu
+
+satish@ubuntu20:~/Downloads$ conda activate tfgpu
+
+(tfgpu) satish@ubuntu20:~/Downloads$ conda install tensorflow-gpu
+
+
+tfgpu will created as an environment within $HOME/.conda/envs/tfgpu directory. tfgpu will also show-up on Anaconda-Navigator environment to launch Jupyter Notebooks
+
+
+(tfgpu) satish@ubuntu20:~$ python
+Python 3.7.7 (default, May  7 2020, 21:25:33)
+[GCC 7.3.0] :: Anaconda, Inc. on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import tensorflow as tf
+>>> tf.config.list_physical_devices('GPU')
+<snip: Lot of messages cuda library messages related to tensorflow>
+successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2020-06-20 14:58:16.013011: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1703] Adding visible gpu devices: 0
+[PhysicalDevice(name='/physical_device:GPU:0', device_type='GPU')]
+
+>>> tf.__version__
+'2.2.0'
+>>> 
+
+TensorFlow with GPU is ready using Conda! However, it still does not work with Jupyter Notebooks!!
+
+
+Try this on shell and on Jupyter Notebook:
+
+i) Shell:
+
+satish@ubuntu20:~$ conda activate tfgpu
+(tfgpu) satish@ubuntu20:~$ python
+Python 3.7.7 (default, May  7 2020, 21:25:33)
+[GCC 7.3.0] :: Anaconda, Inc. on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> 
+>>> import sys
+>>> print (sys.executable)
+/home/satish/.conda/envs/tfgpu/bin/python
+>>> quit()
+
+
+ii) Jupyter Notebook:
+a) Select Environment as tfgpu
+b) Launch Jupyter Notebook
+
+import sys
+print (sys.executable)
+
+/opt/anaconda3/bin/python
+
+
+To Fix this:
+
+satish@ubuntu20:~$ ipython kernel install --user --name=GPU
+Installed kernelspec GPU in /home/satish/.local/share/jupyter/kernels/gpu
+satish@ubuntu20:~$ vi /home/satish/.local/share/jupyter/kernels/gpu/kernel.json
+
+{
+ "argv": [
+  "/home/satish/.conda/envs/tfgpu/bin/python",
+  "-m",
+  "ipykernel_launcher",
+  "-f",
+  "{connection_file}"
+ ],
+ "display_name": "GPU",
+ "language": "python"
+}
+
+satish@ubuntu20:~$ jupyter kernelspec list
+Available kernels:
+  gpu        /home/satish/.local/share/jupyter/kernels/gpu
+  python3    /opt/anaconda3/share/jupyter/kernels/python3
+satish@ubuntu20:~$
+
+
+Now, launch Jupyter Notebook and from drop-down select kernel name as 'GPU'
+
+import sys
+print (sys.executable)
+
+/home/satish/.conda/envs/tfgpu/bin/python
+
+import tensorflow as tf
+tf.test.is_gpu_available()
+
+WARNING:tensorflow:From <ipython-input-2-03f8413104cc>:2: is_gpu_available (from tensorflow.python.framework.test_util) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use `tf.config.list_physical_devices('GPU')` instead.
+
+True
+
+
+Now, Jupyter Notebook also recognizes TensorFlow GPU!!
+
